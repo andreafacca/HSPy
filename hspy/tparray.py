@@ -45,7 +45,8 @@ ArrayTypes = {'HTPA8x8' : 0,
               'HTPA16x16dR3' : 17,
               'HTPA160x120dR1' : 18,
               'HTPA80x60d' : 19,
-              'HTPA60x40dr2' : 20}
+              'HTPA60x40dr2' : 20,
+              'HTPA50x50d' : 21}
 
 class TPArray():
     """
@@ -177,6 +178,9 @@ class TPArray():
         elif (self.ArrayType == ArrayTypes['HTPA60x40dr2']):
             self._width = 60
             self._height = 40  
+        elif (self.ArrayType == ArrayTypes['HTPA50x50d']):
+            self._width = 50
+            self._height = 50       
         elif self.ArrayType is None:
             self._width = None
             self._height = None
@@ -352,19 +356,13 @@ class TPArray():
             
             warnings.warn('ArrayType not fully implemented!')
             
-            # self._package_num = 30
-            # self._package_size = 1401
-            # self._fs = 25
-            # self._NETD = 110
-            # self.Pitch = 45.0e-6        #equal for r1
-            # self.Ampl = 60              #40 for r1         
             
-            # self._mask = np.ones(self._npsize)
+        elif (self.width,self.height) == (50,50):
             
-            # path to array data
-            # path = Path(__file__).parent / 'arraytypes' / '160x120.json'
-            # Load calibration data from file
-            # self._load_calib_json(path)
+            raise NotImplementedError('50x50 ArrayType not yet implemented!')
+            
+            warnings.warn('ArrayType not fully implemented!')
+
         
         else:
             raise Exception('This Thermopile Array is not known.') 
