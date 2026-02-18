@@ -203,7 +203,7 @@ class hdf5_mgr():
             warnings.simplefilter("ignore")
             
             for address in field_dict.keys():
-                field_dict[address].to_hdf(self._hdf5_path,address)
+                field_dict[address].to_hdf(self._hdf5_path,key = address)
                 
     def load_df(self,address,**kwargs):
         
@@ -440,13 +440,11 @@ class hdf5_mgr():
             # Load specified video sequence
             df_video = self.load_df(a+'/data')
             
-            # Get size information
-            (w,h) = (index.loc[u_id,'Width'],index.loc[u_id,'Height'])
-            
+            # Get ArrayType
+            ArrayType = index.loc[u_id,'ArrayType'].item()
             # Initialize a HTPAdGUI_FileReader, which has a function for 
             # writing DataFrames of video to .png
-            reader = HTPAdGUI_FileReader(TPArray(width = w,
-                                                 height = h))
+            reader = HTPAdGUI_FileReader(TPArray ( ArrayType = ArrayType) )
             
             # Pass the DataFrame to the method for writing to .png
             path = Path.cwd() /  (a+'/png')

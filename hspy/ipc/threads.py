@@ -763,3 +763,4 @@ class FileWriter_Thread(RThread):
         upstream_dict = self.read_buffer.get()
     
         return upstream_dict
+

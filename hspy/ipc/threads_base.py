@@ -119,7 +119,7 @@ class WThread(Thread):
                 
                 # Wait for the downstream thread to process
                 while not self.write_buffer.empty():
-                    self.write_condition.wait()
+                    self.write_condition.wait(timeout=0.5)
                        
     def _target_function(self):
         # This is a basic target function that produces a fake processing
@@ -161,7 +161,7 @@ class RThread(Thread):
         
                 # Wait until the upstream thread notifies this thread
                 while self.read_buffer.empty():
-                    self.read_condition.wait()     
+                    self.read_condition.wait(timeout=0.5)     
         
                 # Execute target function
                 result = self._target()
@@ -179,4 +179,6 @@ class RThread(Thread):
         return upstream_dict
             
     def stop(self):
-        self._exit = True
+        with self.read_condition:
+            self._exit = True
+            self.read_condition.notify_all()

@@ -45,6 +45,7 @@ import argparse
 from hspytools.readers import HTPA_UDPReader
 from hspytools.tparray import TPArray
 from hspytools.ipc.threads import UDP,Imshow
+from hspytools.ipc.threads_base import RThread
 
 # from hspytools.ipc.threads import UDP, Record_Thread, FileWriter_Thread
 
@@ -52,19 +53,27 @@ from threading import Condition
 
 # %% Create an argument parser to enable passing argument from the
 # command line to this script
-arg_parser = argparse.ArgumentParser(description="Script with keyword arguments.")
+arg_parser = argparse.ArgumentParser(prog = 'StreamHTPADevice.py',
+                                     description="Searches for HTPA devices in a specified subnet and starts a continuous live-stream of a specified device.")
 
 # %% Add arguments using '--key' style
 arg_parser.add_argument("--bcast",
+                        dest = "bcast",
                         type=str,
                         required=True,
-                        metavar="bcast",
-                        help="Broadcast Address to look for HTPA device")
+                        help="Broadcast Address of the subnet to search for HTPA devices. Format: xxx.xxx.x.255")
+
+arg_parser.add_argument("--no-imshow",
+                        dest = "imshow",
+                        action="store_false",
+                        required = False,
+                        help="Flag disabling cv2.imshow()")
 
 
 # %% Parse arguments
 args = arg_parser.parse_args()
 bcast_addr = args.bcast
+imshow = args.imshow
 
 # %% Main loop
 if __name__ == '__main__':
@@ -75,6 +84,9 @@ if __name__ == '__main__':
     # %% Broadcast looking for devices
     devices = udp_reader.broadcast(bcast_addr)
     
+    # If no devices found, end script
+    if len( udp_reader.devices.index) == 0:
+        raise ValueError('No devices found.')
     
     # Get user input on which device to bind
     while True:
@@ -97,7 +109,6 @@ if __name__ == '__main__':
     # Create threads which bind the device, receive the udp packages and 
     # plot the frame
     
-
     # Create buffers for communication between threads
     udp_buffer = Queue(maxsize=1)
 
@@ -110,20 +121,36 @@ if __name__ == '__main__':
                      Bcast_Addr = bcast_addr,
                      write_buffer = udp_buffer,
                      write_condition = udp_buffer_lock)
-    
-    # Create instance of Imshow thread for plotting using cv2.imshow
-    plot_thread = Imshow(ArrayType = ArrayType,
-                         read_buffer = udp_buffer,
-                         read_condition = udp_buffer_lock)
-    
-    
+        
+    # Distinguish between the cases of plotting the sensor stream or not
+    if imshow: 
+        # Create instance of Imshow thread for plotting using cv2.imshow
+        plot_thread = Imshow(ArrayType = ArrayType,
+                             read_buffer = udp_buffer,
+                             read_condition = udp_buffer_lock)
+            
+    elif not imshow:
+        # Create a dummy read thread, that only empties the queue and releases 
+        # the lock on the writing condition
+        def dummy_target():
+            udp_buffer.get()  # drain one item from the queue each cycle
+        
+        plot_thread = RThread(target = dummy_target,
+                              read_buffer = udp_buffer,
+                              read_condition = udp_buffer_lock)
+        
+        
+        
     # Start the threads
     udp_thread.start()
     plot_thread.start()
 
     # Let threads run 20 seconds
-    time.sleep(20)
+    time.sleep(5)
     
     # Stop the threads in reversed order!
     plot_thread.stop()
     udp_thread.stop()
+
+    print('End')
+        
