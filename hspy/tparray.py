@@ -66,13 +66,11 @@ class TPArray():
         else:
             raise Exception('Provide either SensorType or ArrayType!')
         
-        
         # Init basic attributes and DevConst by resolution
         self._init_DevConst()
         
         # Init reamining properties, otherwise save() method will fail
         self.BCC = attr_dict.pop('BCC',None)
-
 
     @property
     def SensorType(self):
@@ -135,7 +133,7 @@ class TPArray():
             self._width = None
             self._height = None
         else:
-            raise Exception('SensorType not known!')
+            raise NotImplementedError('SensorType not implemented or not known!')
             
     def _init_by_ArrayType(self):
         
@@ -185,7 +183,7 @@ class TPArray():
             self._width = None
             self._height = None
         else:
-            raise Exception('ArrayType not known!')
+            raise NotImplementedError('ArrayType not implemented or not known!')
 
     def _init_DevConst(self):
         
@@ -880,6 +878,9 @@ class TPArray():
 
         """
     
+        # Apply pixel constants for sensitivity compensation?
+        comp_sense = kwargs.pop('comp_sense',True)
+    
         # Convert pixel values to signed interger 64bit
         df_meas = df_meas.astype(np.int64)
         
@@ -889,7 +890,10 @@ class TPArray():
             
             df_frame = df_meas.loc[i]
             
-            df_frame = self._comp_sens(df_frame)
+            
+            # Compensate pixel constants only on demand
+            if comp_sense == True:
+                df_frame = self._comp_sens(df_frame)
                 
             df_frame = self._calc_Tamb0(df_frame)
         
@@ -927,7 +931,7 @@ class TPArray():
             df_frame = self._comp_thermal_offset(df_frame.copy())
             
             # Vdd compensation for all sensors but 8x8
-            if not (self.width,self.height) == (8,8) :
+            if not self.ArrayType == ArrayTypes['HTPA8x8']:
                 df_frame = self._comp_vdd(df_frame)
             
             # Compensate pixel constants only on demand
