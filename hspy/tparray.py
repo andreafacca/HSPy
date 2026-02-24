@@ -45,7 +45,7 @@ ArrayTypes = {'HTPA8x8' : 0,
               'HTPA16x16dR3' : 17,
               'HTPA160x120dR1' : 18,
               'HTPA80x60d' : 19,
-              'HTPA60x40dr2' : 20,
+              'HTPA60x40dR2' : 20,
               'HTPA50x50d' : 21}
 
 class TPArray():
@@ -87,6 +87,13 @@ class TPArray():
         self._ArrayType = ArrayType
         
     @property
+    def InitFlag(self):
+        return self.InitFlag
+    @InitFlag.setter
+    def InitFlag(self,InitFlag:int):
+        self._InitFlag = InitFlag
+        
+    @property
     def width(self):
         return self._width
     @width.setter
@@ -110,28 +117,21 @@ class TPArray():
     def _init_by_SensorType(self):
         
         if (self.SensorType == SensorTypes['HTPA60x40D_L1K9_0K8']):
-            self._width = 60
-            self._height = 40
+            self.ArrayType = ArrayTypes['HTPA60x40d']
         elif (self.SensorType == SensorTypes['HTPA120x84DR2_L3K95_0K8']):
-            self._width = 120
-            self._height = 84
+            self.ArrayType = ArrayTypes['HTPA120x84dR2']
         elif (self.SensorType == SensorTypes['HTPA160x120DR1_L3K95_0K8']):
-            self._width = 160
-            self._height = 120
+            self.ArrayType = ArrayTypes['HTPA160x120dR1']
         elif (self.SensorType == SensorTypes['HTPA8x8DR1_L0K8_0K8']):
-            self._width = 8
-            self._height = 8
+            self.ArrayType = ArrayTypes['HTPA8x8']
         elif (self.SensorType == SensorTypes['HTPA32x32dR2_L1k9_0k8']):
-            self._width = 32
-            self._height = 32
+            self.ArrayType = ArrayTypes['HTPA32x32d']
             self._NETD = 60 # Tuned on Archesens-Data
         elif (self.SensorType == SensorTypes['HTPA32x32dR2_L1k7_0k8']):
-            self._width = 32
-            self._height = 32
+            self.ArrayType = ArrayTypes['HTPA32x32d']
             self._NETD = 152 # from datasheet   
         elif self.SensorType is None:
-            self._width = None
-            self._height = None
+            self.ArrayType = None
         else:
             raise NotImplementedError('SensorType not implemented or not known!')
             
@@ -140,45 +140,59 @@ class TPArray():
         if (self.ArrayType == ArrayTypes['HTPA8x8']):
             self._width = 8
             self._height = 8
+            self.InitFlag = 0
         elif (self.ArrayType == ArrayTypes['HTPA16x16']):
             self._width = 16
             self._height = 16
+            self.InitFlag = 0
         elif (self.ArrayType == ArrayTypes['HTPA32x32d']):
             self._width = 32
             self._height = 32
+            self.InitFlag = 0
         elif (self.ArrayType == ArrayTypes['HTPA80x64d']):
             self._width = 80
             self._height = 64
+            self.InitFlag = 0
         elif (self.ArrayType == ArrayTypes['HTPA120x84d']):
             self._width = 120
             self._height = 84
+            self.InitFlag = 0
         elif (self.ArrayType == ArrayTypes['HTPA84x60d']):
             self._width = 84
             self._height = 60
+            self.InitFlag = 0
         elif (self.ArrayType == ArrayTypes['HTPA60x40d']):
             self._width = 60
             self._height = 40
+            self.InitFlag = 0
         elif (self.ArrayType == ArrayTypes['HTPA160x120d']):
             self._width = 160
             self._height = 120
+            self.InitFlag = 0
         elif (self.ArrayType == ArrayTypes['HTPA120x84dR2']):
             self._width = 120
             self._height = 84
+            self.InitFlag = 0
         elif (self.ArrayType == ArrayTypes['HTPA16x16dR3']):
             self._width = 16
             self._height = 16
+            self.InitFlag = 0
         elif (self.ArrayType == ArrayTypes['HTPA160x120dR1']):
             self._width = 160
             self._height = 120
+            self.InitFlag = 0
         elif (self.ArrayType == ArrayTypes['HTPA80x60d']):
             self._width = 80
             self._height = 60
-        elif (self.ArrayType == ArrayTypes['HTPA60x40dr2']):
+            self.InitFlag = 0
+        elif (self.ArrayType == ArrayTypes['HTPA60x40dR2']):
             self._width = 60
-            self._height = 40  
+            self._height = 40 
+            self.InitFlag = 0
         elif (self.ArrayType == ArrayTypes['HTPA50x50d']):
             self._width = 50
-            self._height = 50       
+            self._height = 50      
+            self.InitFlag = 1
         elif self.ArrayType is None:
             self._width = None
             self._height = None
@@ -193,10 +207,13 @@ class TPArray():
         # Calculate order of data in bds file
         DevConst = {}
         
-        if (self.width,self.height) == (8,8):
+        if self.ArrayType == ArrayTypes['HTPA8x8']:
             DevConst['ATCaddr']=0
             DevConst['NROFBLOCKS']=1
             DevConst['NROFPTAT']=1
+            
+            self.width = 8
+            self.height = 8
             
             self._package_num = 1
             self._package_size = 262
@@ -212,10 +229,14 @@ class TPArray():
             # Load calibration data from file
             self._load_calib_json(path)  
             
-        elif (self.width,self.height) == (16,16):
+        elif self.ArrayType in [ArrayTypes['HTPA16x16'],
+                                ArrayTypes['HTPA16x16dR3']]:
             DevConst['ATCaddr']=0
             DevConst['NROFBLOCKS']=2
             DevConst['NROFPTAT']=2
+            
+            self.width = 16
+            self.height = 16
             
             self._package_num = 1
             self._package_size = 780
@@ -232,10 +253,13 @@ class TPArray():
             # Load calibration data from file
             self._load_calib_json(path)  
         
-        elif (self.width,self.height) == (32,32):
+        elif self.ArrayType == ArrayTypes['HTPA32x32d']:
             DevConst['ATCaddr']=0
             DevConst['NROFBLOCKS']=4
             DevConst['NROFPTAT']=2
+            
+            self.width = 32
+            self.height = 32
             
             self._package_num = 2
             self._package_size = 1292
@@ -252,10 +276,13 @@ class TPArray():
             # Load calibration data from file
             self._load_calib_json(path)  
             
-        elif (self.width,self.height) == (80,64):
+        elif self.ArrayType == ArrayTypes['HTPA80x64d']:
             DevConst['NROFBLOCKS']=4
             DevConst['NROFPTAT']=2
             DevConst['ATCaddr']=0
+            
+            self.width = 80
+            self.height = 64
             
             self._package_num = 10
             self._package_size = 1283
@@ -269,11 +296,13 @@ class TPArray():
             # Load calibration data from file
             self._load_calib_json(path)  
             
-        elif (self.width,self.height) == (60,84):
+        elif self.ArrayType == ArrayTypes['HTPA84x60d']:
             DevConst['NROFBLOCKS']=7
             DevConst['NROFPTAT']=2
             DevConst['ATCaddr']= 1
-                        
+            
+            self.width = 60
+            self.height = 84
             
             self._package_num = 10
             self._package_size = 1283
@@ -289,10 +318,37 @@ class TPArray():
             # Load calibration data from file
             self._load_calib_json(path)  
             
-        elif (self.width,self.height) == (120,84):
+        elif self.ArrayType in [ArrayTypes['HTPA60x40d'],
+                                ArrayTypes['HTPA60x40dR2']]:
+            DevConst['ATCaddr']=1
+            DevConst['NROFBLOCKS']=5
+            DevConst['NROFPTAT']=2
+            
+            self.width = 60
+            self.height = 40
+            
+            self._package_num = 5
+            self._package_size = 1159
+            self._fs = 47
+            self._NETD = 90
+            self.Pitch = 45.0e-6
+            self.Ampl = 60               
+            
+            self._mask = np.ones(self._npsize)
+            
+            # path to array data
+            path = Path(__file__).parent / 'arraytypes' / '60x40.json'
+            # Load calibration data from file
+            self._load_calib_json(path)  
+
+        elif self.ArrayType in [ArrayTypes['HTPA120x84d'],
+                                ArrayTypes['HTPA120x84dR2']]:
             DevConst['ATCaddr']=0
             DevConst['NROFBLOCKS']=6
             DevConst['NROFPTAT']=2
+            
+            self.width = 120
+            self.height = 84
             
             self._package_num = 17
             self._package_size = 1401
@@ -309,29 +365,14 @@ class TPArray():
             # Load calibration data from file
             self._load_calib_json(path)
             
-        elif (self.width,self.height) == (60,40):
-            DevConst['ATCaddr']=1
-            DevConst['NROFBLOCKS']=5
-            DevConst['NROFPTAT']=2
-            
-            self._package_num = 5
-            self._package_size = 1159
-            self._fs = 47
-            self._NETD = 90
-            self.Pitch = 45.0e-6
-            self.Ampl = 60               
-            
-            self._mask = np.ones(self._npsize)
-            
-            # path to array data
-            path = Path(__file__).parent / 'arraytypes' / '60x40.json'
-            # Load calibration data from file
-            self._load_calib_json(path)  
-
-        elif (self.width,self.height) == (160,120):
+        elif self.ArrayType in [ArrayTypes['HTPA160x120d'],
+                                ArrayTypes['HTPA160x120dR1']]:
             DevConst['ATCaddr'] = 1
             DevConst['NROFBLOCKS'] = 12
             DevConst['NROFPTAT'] = 2
+            
+            self.width = 160
+            self.height = 120
             
             self._package_num = 30
             self._package_size = 1401
@@ -347,15 +388,18 @@ class TPArray():
             # Load calibration data from file
             self._load_calib_json(path)
             
-        elif (self.width,self.height) == (80,60):
+        elif self.ArrayType == ArrayTypes['HTPA50x50d']:
             DevConst['ATCaddr'] = 1
             DevConst['NROFBLOCKS'] = 6
             DevConst['NROFPTAT'] = 2
             
+            self.width = 50
+            self.height = 50
+            
             warnings.warn('ArrayType not fully implemented!')
             
             
-        elif (self.width,self.height) == (50,50):
+        elif self.ArrayType == ArrayTypes['HTPA80x60d']:
             
             raise NotImplementedError('50x50 ArrayType not yet implemented!')
             
