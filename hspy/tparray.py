@@ -208,7 +208,7 @@ class TPArray():
         DevConst = {}
         
         if self.ArrayType == ArrayTypes['HTPA8x8']:
-            DevConst['ATCaddr']=0
+            DevConst['NROFATC']=0
             DevConst['NROFBLOCKS']=1
             DevConst['NROFPTAT']=1
             
@@ -231,7 +231,7 @@ class TPArray():
             
         elif self.ArrayType in [ArrayTypes['HTPA16x16'],
                                 ArrayTypes['HTPA16x16dR3']]:
-            DevConst['ATCaddr']=0
+            DevConst['NROFATC']=0
             DevConst['NROFBLOCKS']=2
             DevConst['NROFPTAT']=2
             
@@ -254,7 +254,7 @@ class TPArray():
             self._load_calib_json(path)  
         
         elif self.ArrayType == ArrayTypes['HTPA32x32d']:
-            DevConst['ATCaddr']=0
+            DevConst['NROFATC']=0
             DevConst['NROFBLOCKS']=4
             DevConst['NROFPTAT']=2
             
@@ -277,10 +277,10 @@ class TPArray():
             self._load_calib_json(path)  
             
         elif self.ArrayType == ArrayTypes['HTPA80x64d']:
+            DevConst['NROFATC']=0
             DevConst['NROFBLOCKS']=4
             DevConst['NROFPTAT']=2
-            DevConst['ATCaddr']=0
-            
+                        
             self.width = 80
             self.height = 64
             
@@ -299,7 +299,7 @@ class TPArray():
         elif self.ArrayType == ArrayTypes['HTPA84x60d']:
             DevConst['NROFBLOCKS']=7
             DevConst['NROFPTAT']=2
-            DevConst['ATCaddr']= 1
+            DevConst['NROFATC']= 2
             
             self.width = 60
             self.height = 84
@@ -320,7 +320,7 @@ class TPArray():
             
         elif self.ArrayType in [ArrayTypes['HTPA60x40d'],
                                 ArrayTypes['HTPA60x40dR2']]:
-            DevConst['ATCaddr']=1
+            DevConst['NROFATC']=2
             DevConst['NROFBLOCKS']=5
             DevConst['NROFPTAT']=2
             
@@ -343,7 +343,7 @@ class TPArray():
 
         elif self.ArrayType in [ArrayTypes['HTPA120x84d'],
                                 ArrayTypes['HTPA120x84dR2']]:
-            DevConst['ATCaddr']=0
+            DevConst['NROFATC']=0
             DevConst['NROFBLOCKS']=6
             DevConst['NROFPTAT']=2
             
@@ -367,7 +367,7 @@ class TPArray():
             
         elif self.ArrayType in [ArrayTypes['HTPA160x120d'],
                                 ArrayTypes['HTPA160x120dR1']]:
-            DevConst['ATCaddr'] = 1
+            DevConst['NROFATC'] = 2
             DevConst['NROFBLOCKS'] = 12
             DevConst['NROFPTAT'] = 2
             
@@ -389,7 +389,7 @@ class TPArray():
             self._load_calib_json(path)
             
         elif self.ArrayType == ArrayTypes['HTPA50x50d']:
-            DevConst['ATCaddr'] = 1
+            DevConst['NROFATC'] = 2
             DevConst['NROFBLOCKS'] = 6
             DevConst['NROFPTAT'] = 2
             
@@ -441,13 +441,8 @@ class TPArray():
         no_ptat = int(DevConst['NROFBLOCKS']*DevConst['NROFPTAT'])
         PTAT = ['PTAT'+str(t) for t in range(0,no_ptat)]
         
-        # ATC
-        if DevConst['ATCaddr'] == 0:
-            no_atc = 0
-        else:
-            no_atc = 2
-            
-        ATC = ['ATC'+str(a) for a in range(0,no_atc)]
+        # ATC            
+        ATC = ['ATC'+str(a) for a in range(0,DevConst['NROFATC'])]
         
         
         self._pix = pix
