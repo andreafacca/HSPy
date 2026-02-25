@@ -4,12 +4,21 @@ Created on Wed Jun 21 11:16:48 2023
 
 @author: Rehmer
 """
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 import json
 from pathlib import Path
 import struct
 import time
+
+import warnings
+
+from dataclasses import dataclass
+from collections.abc import Sequence, Iterator
+from typing import Dict, List, Mapping, Any
+
 
 from .LuT import LuT
 
@@ -45,7 +54,7 @@ ArrayTypes = {'HTPA8x8' : 0,
               'HTPA16x16dR3' : 17,
               'HTPA160x120dR1' : 18,
               'HTPA80x60d' : 19,
-              'HTPA60x40dr2' : 20,
+              'HTPA60x40dR2' : 20,
               'HTPA50x50d' : 21}
 
 class TPArray():
@@ -59,6 +68,8 @@ class TPArray():
         self._SensorType = attr_dict.pop('SensorType',None)
         self._ArrayType = attr_dict.pop('ArrayType',None)
         
+        self.DevConst = {}
+        
         if self._SensorType is not None:
             self._init_by_SensorType()
         elif self._ArrayType is not None:
@@ -66,13 +77,11 @@ class TPArray():
         else:
             raise Exception('Provide either SensorType or ArrayType!')
         
-        
         # Init basic attributes and DevConst by resolution
         self._init_DevConst()
         
         # Init reamining properties, otherwise save() method will fail
         self.BCC = attr_dict.pop('BCC',None)
-
 
     @property
     def SensorType(self):
@@ -87,6 +96,27 @@ class TPArray():
     @ArrayType.setter
     def ArrayType(self,ArrayType:int):
         self._ArrayType = ArrayType
+        
+    @property
+    def DesignGen(self):
+        return self._DesignGen
+    @DesignGen.setter
+    def DesignGen(self,DesignGen:int):
+        self._DesignGen = DesignGen
+        
+    @property
+    def DevConst(self):
+        return self._DevConst
+    @DevConst.setter
+    def DevConst(self,DevConst:dict):
+        self._DevConst = DevConst
+        
+    @property
+    def DataCols(self):
+        return self._DataCols
+    @DataCols.setter
+    def DataCols(self,DataCols:DataCols):
+        self._DataCols = DataCols
         
     @property
     def width(self):
@@ -108,97 +138,162 @@ class TPArray():
     @BCC.setter
     def BCC(self,BCC):
         self._BCC = BCC
+        
+    # ------ Compatibility attributes. To be removed in future releases ------
+    @property
+    def _pix(self):
+        warnings.warn(
+        "TPArray._pix is deprecated and will be removed. "
+        "Use TPArray.DataCols.pix instead.",
+        DeprecationWarning,
+        stacklevel=2)
+        return self.DataCols.pix
+    @property
+    def _e_off(self):
+        warnings.warn(
+        "TPArray._e_off is deprecated and will be removed. "
+        "Use TPArray.DataCols.e_off instead.",
+        DeprecationWarning,
+        stacklevel=2)
+        return self.DataCols.e_off
+    @property
+    def _vdd(self):
+        warnings.warn(
+        "TPArray._vdd is deprecated and will be removed. "
+        "Use TPArray.DataCols.vdd instead.",
+        DeprecationWarning,
+        stacklevel=2)
+        return self.DataCols.vdd    
+    @property
+    def _T_amb(self):
+        warnings.warn(
+        "TPArray._T_amb is deprecated and will be removed. "
+        "Use TPArray.DataCols.T_amb instead.",
+        DeprecationWarning,
+        stacklevel=2)
+        return self.DataCols.T_amb       
+    @property
+    def _PTAT(self):
+        warnings.warn(
+        "TPArray._PTAT is deprecated and will be removed. "
+        "Use TPArray.DataCols.PTAT instead.",
+        DeprecationWarning,
+        stacklevel=2)
+        return self.DataCols.PTAT
+    @property
+    def _ATC(self):
+        warnings.warn(
+        "TPArray.ATC is deprecated and will be removed. "
+        "Use TPArray.DataCols.ATC instead.",
+        DeprecationWarning,
+        stacklevel=2)
+        return self.DataCols.ATC
+    @property
+    def _serial_data_order(self):
+        warnings.warn(
+        "TPArray._serial_data_order is deprecated and will be removed. "
+        "Use TPArray.DataCols.all() instead.",
+        DeprecationWarning,
+        stacklevel=2)
+        return self.DataCols.all()    
+
+    # -------------------------------------------------------------------------
 
     def _init_by_SensorType(self):
         
         if (self.SensorType == SensorTypes['HTPA60x40D_L1K9_0K8']):
-            self._width = 60
-            self._height = 40
+            self.ArrayType = ArrayTypes['HTPA60x40d']
         elif (self.SensorType == SensorTypes['HTPA120x84DR2_L3K95_0K8']):
-            self._width = 120
-            self._height = 84
+            self.ArrayType = ArrayTypes['HTPA120x84dR2']
         elif (self.SensorType == SensorTypes['HTPA160x120DR1_L3K95_0K8']):
-            self._width = 160
-            self._height = 120
+            self.ArrayType = ArrayTypes['HTPA160x120dR1']
         elif (self.SensorType == SensorTypes['HTPA8x8DR1_L0K8_0K8']):
-            self._width = 8
-            self._height = 8
+            self.ArrayType = ArrayTypes['HTPA8x8']
         elif (self.SensorType == SensorTypes['HTPA32x32dR2_L1k9_0k8']):
-            self._width = 32
-            self._height = 32
+            self.ArrayType = ArrayTypes['HTPA32x32d']
             self._NETD = 60 # Tuned on Archesens-Data
         elif (self.SensorType == SensorTypes['HTPA32x32dR2_L1k7_0k8']):
-            self._width = 32
-            self._height = 32
+            self.ArrayType = ArrayTypes['HTPA32x32d']
             self._NETD = 152 # from datasheet   
         elif self.SensorType is None:
-            self._width = None
-            self._height = None
+            self.ArrayType = None
         else:
-            raise Exception('SensorType not known!')
+            raise NotImplementedError('SensorType not implemented or not known!')
             
     def _init_by_ArrayType(self):
         
         if (self.ArrayType == ArrayTypes['HTPA8x8']):
-            self._width = 8
-            self._height = 8
+            self.width = 8
+            self.height = 8
+            self.DesignGen = 0
         elif (self.ArrayType == ArrayTypes['HTPA16x16']):
-            self._width = 16
-            self._height = 16
+            self.width = 16
+            self.height = 16
+            self.DesignGen = 0
         elif (self.ArrayType == ArrayTypes['HTPA32x32d']):
-            self._width = 32
-            self._height = 32
+            self.width = 32
+            self.height = 32
+            self.DesignGen = 0
         elif (self.ArrayType == ArrayTypes['HTPA80x64d']):
-            self._width = 80
-            self._height = 64
+            self.width = 80
+            self.height = 64
+            self.DesignGen = 0
         elif (self.ArrayType == ArrayTypes['HTPA120x84d']):
-            self._width = 120
-            self._height = 84
+            self.width = 120
+            self.height = 84
+            self.DesignGen = 0
         elif (self.ArrayType == ArrayTypes['HTPA84x60d']):
-            self._width = 84
-            self._height = 60
+            self.width = 84
+            self.height = 60
+            self.DesignGen = 1
         elif (self.ArrayType == ArrayTypes['HTPA60x40d']):
-            self._width = 60
-            self._height = 40
+            self.width = 60
+            self.height = 40
+            self.DesignGen = 1
         elif (self.ArrayType == ArrayTypes['HTPA160x120d']):
-            self._width = 160
-            self._height = 120
+            self.width = 160
+            self.height = 120
+            self.DesignGen = 1
         elif (self.ArrayType == ArrayTypes['HTPA120x84dR2']):
-            self._width = 120
-            self._height = 84
+            self.width = 120
+            self.height = 84
+            self.DesignGen = 1
         elif (self.ArrayType == ArrayTypes['HTPA16x16dR3']):
-            self._width = 16
-            self._height = 16
+            self.width = 16
+            self.height = 16
+            self.DesignGen = 2
         elif (self.ArrayType == ArrayTypes['HTPA160x120dR1']):
-            self._width = 160
-            self._height = 120
+            self.width = 160
+            self.height = 120
+            self.DesignGen = 1
         elif (self.ArrayType == ArrayTypes['HTPA80x60d']):
-            self._width = 80
-            self._height = 60
-        elif (self.ArrayType == ArrayTypes['HTPA60x40dr2']):
-            self._width = 60
-            self._height = 40  
+            self.width = 80
+            self.height = 60
+            self.DesignGen = 3
+        elif (self.ArrayType == ArrayTypes['HTPA60x40dR2']):
+            self.width = 60
+            self.height = 40 
+            self.DesignGen = 1
         elif (self.ArrayType == ArrayTypes['HTPA50x50d']):
-            self._width = 50
-            self._height = 50       
+            self.width = 50
+            self.height = 50      
+            self.DesignGen = 4
         elif self.ArrayType is None:
-            self._width = None
-            self._height = None
+            self.width = None
+            self.height = None
         else:
-            raise Exception('ArrayType not known!')
+            raise NotImplementedError('ArrayType not implemented or not known!')
 
     def _init_DevConst(self):
         
         self._size = (self.width,self.height)
         self._npsize = (self.height,self.width)
         
-        # Calculate order of data in bds file
-        DevConst = {}
         
-        if (self.width,self.height) == (8,8):
-            DevConst['ATCaddr']=0
-            DevConst['NROFBLOCKS']=1
-            DevConst['NROFPTAT']=1
+        if self.ArrayType == ArrayTypes['HTPA8x8']:
+            self.DevConst['NROFATC']=0
+            self.DevConst['NROFBLOCKS']=1
+            self.DevConst['NROFPTAT']=1
             
             self._package_num = 1
             self._package_size = 262
@@ -214,10 +309,11 @@ class TPArray():
             # Load calibration data from file
             self._load_calib_json(path)  
             
-        elif (self.width,self.height) == (16,16):
-            DevConst['ATCaddr']=0
-            DevConst['NROFBLOCKS']=2
-            DevConst['NROFPTAT']=2
+        elif self.ArrayType in [ArrayTypes['HTPA16x16'],
+                                ArrayTypes['HTPA16x16dR3']]:
+            self.DevConst['NROFATC']=0
+            self.DevConst['NROFBLOCKS']=2
+            self.DevConst['NROFPTAT']=2
             
             self._package_num = 1
             self._package_size = 780
@@ -234,11 +330,11 @@ class TPArray():
             # Load calibration data from file
             self._load_calib_json(path)  
         
-        elif (self.width,self.height) == (32,32):
-            DevConst['ATCaddr']=0
-            DevConst['NROFBLOCKS']=4
-            DevConst['NROFPTAT']=2
-            
+        elif self.ArrayType == ArrayTypes['HTPA32x32d']:
+            self.DevConst['NROFATC']=0
+            self.DevConst['NROFBLOCKS']=4
+            self.DevConst['NROFPTAT']=2
+
             self._package_num = 2
             self._package_size = 1292
             self._fs = 27
@@ -254,11 +350,11 @@ class TPArray():
             # Load calibration data from file
             self._load_calib_json(path)  
             
-        elif (self.width,self.height) == (80,64):
-            DevConst['NROFBLOCKS']=4
-            DevConst['NROFPTAT']=2
-            DevConst['ATCaddr']=0
-            
+        elif self.ArrayType == ArrayTypes['HTPA80x64d']:
+            self.DevConst['NROFATC']=0
+            self.DevConst['NROFBLOCKS']=4
+            self.DevConst['NROFPTAT']=2
+
             self._package_num = 10
             self._package_size = 1283
             self._fs = 41
@@ -271,12 +367,11 @@ class TPArray():
             # Load calibration data from file
             self._load_calib_json(path)  
             
-        elif (self.width,self.height) == (60,84):
-            DevConst['NROFBLOCKS']=7
-            DevConst['NROFPTAT']=2
-            DevConst['ATCaddr']= 1
-                        
-            
+        elif self.ArrayType == ArrayTypes['HTPA84x60d']:
+            self.DevConst['NROFBLOCKS']=7
+            self.DevConst['NROFPTAT']=2
+            self.DevConst['NROFATC']= 2
+
             self._package_num = 10
             self._package_size = 1283
             self._fs = 41
@@ -291,11 +386,31 @@ class TPArray():
             # Load calibration data from file
             self._load_calib_json(path)  
             
-        elif (self.width,self.height) == (120,84):
-            DevConst['ATCaddr']=0
-            DevConst['NROFBLOCKS']=6
-            DevConst['NROFPTAT']=2
+        elif self.ArrayType in [ArrayTypes['HTPA60x40d'],
+                                ArrayTypes['HTPA60x40dR2']]:
+            self.DevConst['NROFATC']=2
+            self.DevConst['NROFBLOCKS']=5
+            self.DevConst['NROFPTAT']=2
+
+            self._package_num = 5
+            self._package_size = 1159
+            self._fs = 47
+            self._NETD = 90
+            self.Pitch = 45.0e-6
+            self.Ampl = 60               
             
+            self._mask = np.ones(self._npsize)
+            
+            # path to array data
+            path = Path(__file__).parent / 'arraytypes' / '60x40.json'
+            # Load calibration data from file
+            self._load_calib_json(path)  
+
+        elif self.ArrayType in [ArrayTypes['HTPA120x84d'],
+                                ArrayTypes['HTPA120x84dR2']]:
+            self.DevConst['NROFATC']=0
+            self.DevConst['NROFBLOCKS']=6
+
             self._package_num = 17
             self._package_size = 1401
             self._fs = 20
@@ -311,30 +426,12 @@ class TPArray():
             # Load calibration data from file
             self._load_calib_json(path)
             
-        elif (self.width,self.height) == (60,40):
-            DevConst['ATCaddr']=1
-            DevConst['NROFBLOCKS']=5
-            DevConst['NROFPTAT']=2
-            
-            self._package_num = 5
-            self._package_size = 1159
-            self._fs = 47
-            self._NETD = 90
-            self.Pitch = 45.0e-6
-            self.Ampl = 60               
-            
-            self._mask = np.ones(self._npsize)
-            
-            # path to array data
-            path = Path(__file__).parent / 'arraytypes' / '60x40.json'
-            # Load calibration data from file
-            self._load_calib_json(path)  
+        elif self.ArrayType in [ArrayTypes['HTPA160x120d'],
+                                ArrayTypes['HTPA160x120dR1']]:
+            self.DevConst['NROFATC'] = 2
+            self.DevConst['NROFBLOCKS'] = 12
+            self.DevConst['NROFPTAT'] = 2
 
-        elif (self.width,self.height) == (160,120):
-            DevConst['ATCaddr'] = 1
-            DevConst['NROFBLOCKS'] = 12
-            DevConst['NROFPTAT'] = 2
-            
             self._package_num = 30
             self._package_size = 1401
             self._fs = 25
@@ -349,24 +446,33 @@ class TPArray():
             # Load calibration data from file
             self._load_calib_json(path)
             
-        elif (self.width,self.height) == (80,60):
-            DevConst['ATCaddr'] = 1
-            DevConst['NROFBLOCKS'] = 6
-            DevConst['NROFPTAT'] = 2
+        elif self.ArrayType == ArrayTypes['HTPA50x50d']:
+            pass
             
-            warnings.warn('ArrayType not fully implemented!')
+        elif self.ArrayType == ArrayTypes['HTPA80x60d']:
             
-            
-        elif (self.width,self.height) == (50,50):
-            
-            raise NotImplementedError('50x50 ArrayType not yet implemented!')
+            raise NotImplementedError('80x60 ArrayType not yet implemented!')
             
             warnings.warn('ArrayType not fully implemented!')
 
         
         else:
             raise Exception('This Thermopile Array is not known.') 
-         
+        
+        # From the hard-coded constants, the remaining useful information can
+        # be derived
+        if self.DesignGen <= 3:
+            self._init_DerivedConstants_3()
+        elif self.DesignGen == 4:
+            self._init_DerivedConstants_4()
+        else:
+            raise ValueError('DesignGen is not set or value not known.')
+    
+    def _init_DerivedConstants_3(self):
+        
+        # For convenience
+        DevConst = self.DevConst
+        
         # Remaining DevConst can be derived
         DevConst['VDDaddr'] = \
             int(self.width*self.height+self.height/DevConst['NROFBLOCKS']*self.width)   
@@ -374,7 +480,7 @@ class TPArray():
         DevConst['TAaddr']=DevConst['VDDaddr'] + 1
         DevConst['PTaddr']=DevConst['TAaddr'] + 1
             
-        self._DevConst = DevConst        
+        self.DevConst = DevConst        
         self._rowsPerBlock = int(self.height/DevConst['NROFBLOCKS'] / 2)
         self._pixelPerBlock = int(self._rowsPerBlock * self.width)
         self._PCSCALEVAL = 100000000
@@ -399,23 +505,50 @@ class TPArray():
         no_ptat = int(DevConst['NROFBLOCKS']*DevConst['NROFPTAT'])
         PTAT = ['PTAT'+str(t) for t in range(0,no_ptat)]
         
-        # ATC
-        if DevConst['ATCaddr'] == 0:
-            no_atc = 0
-        else:
-            no_atc = 2
-            
-        ATC = ['ATC'+str(a) for a in range(0,no_atc)]
+        # ATC            
+        ATC = ['ATC'+str(a) for a in range(0,DevConst['NROFATC'])]
+                
+        # Store these headers in the class attribute DataCols
+        ColHeaders = {'pix':pix,
+                      'e_off': e_off,
+                      'vdd':vdd,
+                      'T_amb':T_amb,
+                      'PTAT':PTAT,
+                      'ATC':ATC}
         
+        self.DataCols = DataCols(ColHeaders)
+
+    def _init_DerivedConstants_4(self):
         
-        self._pix = pix
-        self._e_off = e_off
-        self._vdd = vdd
-        self._T_amb = T_amb
-        self._PTAT = PTAT
-        self._ATC = ATC
+        # For convenience
+        DevConst = self.DevConst
         
-        self._serial_data_order = pix + e_off + vdd + T_amb + PTAT + ATC
+        # From DevConst, derive the column headers for .bds / .txt files 
+        
+        # Pixel headers
+        pix = ['pix'+str(p) for p in range(0,self.width*self.height)]
+        
+        # Electrical Offset headers
+        e_off = ['e_off'+str(e) for e in range(0,self.width)]
+        
+        # Vdd headers (there's only one)
+        vdd = ['Vdd0']
+        
+        # Ambient temperature header (there's only one)
+        T_amb = ['Tamb0']
+        
+        # PTAT header (there's only one)
+        PTAT = ['PTAT0']
+        
+        # Store these headers in the class attribute DataCols
+        ColHeaders = {'pix':pix,
+                      'e_off': e_off,
+                      'vdd':vdd,
+                      'T_amb':T_amb,
+                      'PTAT':PTAT}
+        
+        self.DataCols = DataCols(ColHeaders)
+        
         
     def _load_calib_json(self, path:Path):
         
@@ -501,17 +634,17 @@ class TPArray():
         if not (self.width,self.height) == (8,8):
             
             NROFBLOCKS = self.get_DevConst()['NROFBLOCKS']
-            vdd_size = (int(self._height/NROFBLOCKS),self._width)
+            vdd_size = (int(self.height/NROFBLOCKS),self._width)
                         
             # The lower half needs to be flipped vertically
-            bcc['pij'][int(self._height/2):,::] = \
-                np.flipud(bcc['pij'][int(self._height/2):,::])
+            bcc['pij'][int(self.height/2):,::] = \
+                np.flipud(bcc['pij'][int(self.height/2):,::])
             
-            bcc['thGrad'][int(self._height/2):,::] = \
-                np.flipud(bcc['thGrad'][int(self._height/2):,::])
+            bcc['thGrad'][int(self.height/2):,::] = \
+                np.flipud(bcc['thGrad'][int(self.height/2):,::])
                 
-            bcc['thOff'][int(self._height/2):,::] = \
-                np.flipud(bcc['thOff'][int(self._height/2):,::])
+            bcc['thOff'][int(self.height/2):,::] = \
+                np.flipud(bcc['thOff'][int(self.height/2):,::])
             
             bcc['vddCompGrad'] = np.array(bcc['vddCompGrad']).reshape(vdd_size)
             bcc['vddCompOff'] = np.array(bcc['vddCompOff']).reshape(vdd_size)
@@ -631,6 +764,29 @@ class TPArray():
         return conv_val
 
     def _comp_thermal_offset(self,df_meas:pd.Series):
+        warnings.warn(
+        "TPArray._comp_thermal_offset is deprecated and will be removed. "
+        "Use TPArray.comp_thermal_offset instead.",
+        DeprecationWarning,
+        stacklevel=2)
+        return self.comp_thermal_offset(df_meas)
+
+    def comp_thermal_offset(self,df_meas:pd.Series):
+        
+        # Check type
+        if not isinstance(df_meas,pd.Series):
+            raise TypeError('df_meas must be pd.Series type')
+        
+        ''' Thermal offset compensation '''
+        if self.DesignGen <= 3:
+            return self._comp_thermal_offset_3(df_meas)
+        elif self.DesignGen == 4:
+            return self._comp_thermal_offset_4(df_meas)
+        else:
+            raise ValueError('DesignGen is not set or value not known.')
+
+
+    def _comp_thermal_offset_3(self,df_meas:pd.Series):
         
         ''' Thermal offset compensation '''
         
@@ -660,7 +816,38 @@ class TPArray():
         
         return df_meas
     
+    def _comp_thermal_offset_4(self,df_meas:pd.Series):
+        
+        ''' Thermal offset compensation '''
+        
+        raise NotImplementedError('Thermal offset compensation not implemented '
+                                  'for this htpa device')
+        
+        return df_meas
+
     def _comp_electrical_offset(self,df_meas:pd.Series):
+        warnings.warn(
+        "TPArray._comp_electrical_offset is deprecated and will be removed. "
+        "Use TPArray.comp_electrical_offset instead.",
+        DeprecationWarning,
+        stacklevel=2)
+        return self.comp_electrical_offset(df_meas)
+    
+    def comp_electrical_offset(self,df_meas:pd.Series):
+        
+        # Check type
+        if not isinstance(df_meas,pd.Series):
+            raise TypeError('df_meas must be pd.Series type')
+        
+        ''' Thermal offset compensation '''
+        if self.DesignGen <= 3:
+            return self._comp_electrical_offset_3(df_meas)
+        elif self.DesignGen == 4:
+            return self._comp_electrical_offset_4(df_meas)
+        else:
+            raise ValueError('DesignGen is not set or value not known.')
+        
+    def _comp_electrical_offset_3(self,df_meas:pd.Series):
         """
         
 
@@ -712,8 +899,55 @@ class TPArray():
         df_meas.loc[self._pix] = V_el_comp
         
         return df_meas
+    
+    def _comp_electrical_offset_4(self,df_meas:pd.Series):
         
+        ''' Eletrical offset compensation '''
+        
+        # Obtain pixels and electrical offsets from df_meas
+        pix = df_meas[self.DataCols.pix].values
+        e_off = df_meas[self.DataCols.e_off].values
+        
+        # Reshape pixels
+        pix = pix.reshape(self._npsize)
+        
+        # Repeat electrical offsets along vertical axis
+        e_off = np.tile(e_off,(self.height,1))
+        
+        # Subtract
+        pix_comp = pix - e_off
+        
+        # Flatten and reassign to DataFrame
+        df_meas[self.DataCols.pix] = pix_comp.flatten()
+        # raise NotImplementedError('Eletrical offset compensation not implemented '
+        #                           'for this htpa device')
+        
+        
+        return df_meas
+
     def _comp_vdd(self,df_meas:pd.Series):
+        warnings.warn(
+        "TPArray._comp_vdd is deprecated and will be removed. "
+        "Use TPArray.comp_vdd instead.",
+        DeprecationWarning,
+        stacklevel=2)
+        return self.comp_vdd(df_meas)
+
+    def comp_vdd(self,df_meas:pd.Series):
+        
+        # Check type
+        if not isinstance(df_meas,pd.Series):
+            raise TypeError('df_meas must be pd.Series type')
+        
+        ''' Vdd compensation '''
+        if self.DesignGen <= 3:
+            return self._comp_vdd_3(df_meas)
+        elif self.DesignGen == 4:
+            return self._comp_vdd_4(df_meas)
+        else:
+            raise ValueError('DesignGen is not set or value not known.')
+        
+    def _comp_vdd_3(self,df_meas:pd.Series):
         
         ''' Vdd compensation '''
         
@@ -772,9 +1006,40 @@ class TPArray():
         df_meas.loc[self._pix] = V_vdd_comp.flatten().astype(pixel_dtype)
         
         return df_meas
-    
-    def _comp_sens(self,df_meas:pd.Series):
+
+    def _comp_vdd_4(self,df_meas:pd.Series):
         
+        ''' Vdd compensation '''
+        
+        raise NotImplementedError('Vdd compensation not implemented '
+                                  'for this htpa device')
+        
+
+    def _comp_sens(self,df_meas:pd.Series):
+        warnings.warn(
+        "TPArray._comp_sens is deprecated and will be removed. "
+        "Use TPArray.comp_sens instead.",
+        DeprecationWarning,
+        stacklevel=2)
+        return self.comp_sens(df_meas)
+
+    def comp_sens(self,df_meas:pd.Series):
+        
+        # Check type
+        if not isinstance(df_meas,pd.Series):
+            raise TypeError('df_meas must be pd.Series type')
+            
+        ''' Sensitivity compensation '''
+        if self.DesignGen <= 3:
+            return self._comp_sens_3(df_meas)
+        elif self.DesignGen == 4:
+            return self._comp_sens_4(df_meas)
+        else:
+            raise ValueError('DesignGen is not set or value not known.')
+    
+    def _comp_sens_3(self,df_meas:pd.Series):
+        
+        ''' Sensitivity compensation '''
         Pixel = df_meas[self._pix] 
         pixel_dtype = df_meas[self._pix].dtypes
 
@@ -798,12 +1063,39 @@ class TPArray():
         df_meas.loc[self._pix] = VijPixC.astype(pixel_dtype)
         
         return df_meas
+
+    def _comp_sens_4(self,df_meas:pd.Series):
         
+        ''' Sensitivity compensation '''
+        
+        raise NotImplementedError('Vdd compensation not implemented '
+                                  'for this htpa device')
+
     def _calc_Tamb0(self,df_meas:pd.Series):
+        warnings.warn(
+        "TPArray._calc_Tamb0 is deprecated and will be removed. "
+        "Use TPArray.calc_Tamb0 instead.",
+        DeprecationWarning,
+        stacklevel=2)
+        return self.calc_Tamb0(df_meas)
+
+    def calc_Tamb0(self,df_meas:pd.Series):
+        
+        # Check type
+        if not isinstance(df_meas,pd.Series):
+            raise TypeError('df_meas must be pd.Series type')
+        
+        ''' Sensitivity compensation '''
+        if self.DesignGen <= 3:
+            return self._calc_Tamb0_3(df_meas)
+        elif self.DesignGen == 4:
+            return self._calc_Tamb0_4(df_meas)
+        else:
+            raise ValueError('DesignGen is not set or value not known.')
+
+    def _calc_Tamb0_3(self,df_meas:pd.Series):
         
         ptat_av = df_meas[self._PTAT].mean()
-        
-        
         
         ptat_grad = self.BCC['ptatGrad']
         ptat_off = self.BCC['ptatOffset']
@@ -814,6 +1106,13 @@ class TPArray():
         df_meas.loc[self._T_amb] = Tamb0.astype(dtype)
         
         return df_meas
+    
+    def _calc_Tamb0_4(self,df_meas:pd.Series):
+        
+        ''' Sensitivity compensation '''
+        
+        raise NotImplementedError('Vdd compensation not implemented '
+                                  'for this htpa device')
     
     def frame_to_blocks(self,frame:np.ndarray,**kwargs)->dict:
         """
@@ -927,7 +1226,7 @@ class TPArray():
             df_frame = self._comp_thermal_offset(df_frame.copy())
             
             # Vdd compensation for all sensors but 8x8
-            if not (self.width,self.height) == (8,8) :
+            if not self.ArrayType == ArrayTypes['HTPA8x8']:
                 df_frame = self._comp_vdd(df_frame)
             
             # Compensate pixel constants only on demand
@@ -1008,14 +1307,14 @@ class TPArray():
         """
         
         # Calculate center
-        x_center = (self._width-1) / 2
-        y_center = (self._height-1) / 2
+        x_center = (self.width-1) / 2
+        y_center = (self.height-1) / 2
         
         # Initialize mask
-        mask = np.zeros(( self._height, self._width))
+        mask = np.zeros(( self.height, self.width))
         
         # Create meshgrid of coordinates
-        y, x = np.meshgrid(np.arange(self._height), np.arange(self._width),
+        y, x = np.meshgrid(np.arange(self.height), np.arange(self.width),
                            indexing = 'ij')
 
         
@@ -1095,4 +1394,44 @@ class TPArray():
         attr_dict.update(class_dict)
             
         return attr_dict 
-        
+
+
+@dataclass
+class DataCols(Sequence[str]):
+    """
+    - Attribute access: cols.pix -> list of headers in group "pix"
+    - Sequence behavior: list(cols) -> all headers concatenated
+    """
+    _groups: Dict[str, List[str]]
+
+    def __getattr__(self, name: str) -> List[str]:
+        # Called only if normal attribute lookup fails
+        try:
+            return self._groups[name]
+        except KeyError as e:
+            raise AttributeError(f"No header group named '{name}'") from e
+
+    def __iter__(self) -> Iterator[str]:
+        for group in self._groups.values():
+            yield from group
+
+    def __len__(self) -> int:
+        return sum(len(g) for g in self._groups.values())
+
+    def __getitem__(self, idx: int) -> str:
+        # Index into the flattened/concatenated view
+        if idx < 0:
+            idx = len(self) + idx
+        for group in self._groups.values():
+            if idx < len(group):
+                return group[idx]
+            idx -= len(group)
+        raise IndexError("DataCols index out of range")
+
+    def all(self) -> List[str]:
+        """Explicit 'give me the concatenated list'."""
+        return list(self)
+
+    def as_dict(self) -> Mapping[str, List[str]]:
+        """Optional: expose groups safely."""
+        return dict(self._groups)

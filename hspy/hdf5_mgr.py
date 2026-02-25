@@ -13,7 +13,7 @@ import os
 import inspect
 
 from .readers import HTPAdGUI_FileReader
-from .tparray import TPArray
+from .tparray import TPArray, ArrayTypes
 
 class hdf5_mgr():
 
