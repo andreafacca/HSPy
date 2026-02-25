@@ -447,7 +447,7 @@ class TPArray():
             self._load_calib_json(path)
             
         elif self.ArrayType == ArrayTypes['HTPA80x60d']:
-            self.DevConst['ATCaddr'] = 1
+            self.DevConst['NROFATC'] = 1
             self.DevConst['NROFBLOCKS'] = 6
             self.DevConst['NROFPTAT'] = 2
             
