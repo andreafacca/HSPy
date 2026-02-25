@@ -446,16 +446,16 @@ class TPArray():
             # Load calibration data from file
             self._load_calib_json(path)
             
+        elif self.ArrayType == ArrayTypes['HTPA80x60d']:
+            self.DevConst['ATCaddr'] = 1
+            self.DevConst['NROFBLOCKS'] = 6
+            self.DevConst['NROFPTAT'] = 2
+            
+            warnings.warn('ArrayType not fully implemented!')
+            
         elif self.ArrayType == ArrayTypes['HTPA50x50d']:
             pass
             
-        elif self.ArrayType == ArrayTypes['HTPA80x60d']:
-            
-            raise NotImplementedError('80x60 ArrayType not yet implemented!')
-            
-            warnings.warn('ArrayType not fully implemented!')
-
-        
         else:
             raise Exception('This Thermopile Array is not known.') 
         
