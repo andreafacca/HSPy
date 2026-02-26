@@ -447,15 +447,17 @@ class TPArray():
             self._load_calib_json(path)
             
         elif self.ArrayType == ArrayTypes['HTPA80x60d']:
-            self.DevConst['NROFATC'] = 1
+            self.DevConst['NROFATC'] = 2
             self.DevConst['NROFBLOCKS'] = 6
             self.DevConst['NROFPTAT'] = 2
             
             warnings.warn('ArrayType not fully implemented!')
             
         elif self.ArrayType == ArrayTypes['HTPA50x50d']:
-            pass
-            
+            self.DevConst['NROFATC'] = 0
+            self.DevConst['NROFPTAT'] = 1
+
+
         else:
             raise Exception('This Thermopile Array is not known.') 
         
@@ -522,6 +524,11 @@ class TPArray():
         
         # For convenience
         DevConst = self.DevConst
+        #put here VDDadr, etc.
+        self.DevConst = DevConst        
+        self._rowsPerBlock = int(1)
+        self._pixelPerBlock = int(self.width)
+                
         
         # From DevConst, derive the column headers for .bds / .txt files 
         
