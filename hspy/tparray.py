@@ -443,6 +443,7 @@ class TPArray():
             
             # path to array data
             path = Path(__file__).parent / 'arraytypes' / '160x120.json'
+            
             # Load calibration data from file
             self._load_calib_json(path)
             
@@ -622,7 +623,10 @@ class TPArray():
         for key in bcc.keys():
             bcc[key] = np.array(bcc[key]) 
 
-        
+        # Derive calibration settings from raw values
+        bcc = self._derive_calib_settings(bcc)
+
+
         # Convert all arrays to appropriate shape and flip them
         # properly
         bcc['pij'] = np.array(bcc['pij']).reshape(self._npsize)
@@ -739,6 +743,38 @@ class TPArray():
             conv_val = None
         
         return conv_val
+    
+    def _derive_calib_settings(self,bcc:dict) -> dict:
+        
+        if 'MBIT(calib)' in bcc.keys():
+            
+            # Extract int from bcc
+            MBIT_calib = bcc['MBIT(calib)'].item()
+            
+            if MBIT_calib != 0 and MBIT_calib != 255:
+    
+                # Shift right 4 positions and mask to extract REFCAL_calib
+                REFCAL_calib = (MBIT_calib>>4) & 0b11
+            
+            else:
+                REFCAL_calib = np.nan
+                
+        if 'MBIT(user)' in bcc.keys():
+            
+            # Extract int from bcc
+            MBIT_user = bcc['MBIT(user)'].item()
+            
+            if MBIT_user != 0 and MBIT_user != 255:
+    
+                # Shift right 4 positions and mask to extract REFCAL_user
+                REFCAL_user = (MBIT_user>>4) & 0b11
+            
+            else:
+                REFCAL_user = np.nan        
+                
+        bcc['REFCAL(user)'] = REFCAL_user
+
+        return bcc
 
     def _extract_signed_12bit(self,raw_val):
         conv_val = []
