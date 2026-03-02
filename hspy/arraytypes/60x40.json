@@ -22,6 +22,56 @@
 		"adr_start": "0x0D",
 		"adr_stop":  "0x0D"},
 
+	"MBIT(calib)": {
+		"dtype": "uint8",
+		"adr_start": "0x1A",
+		"adr_stop":  "0x1A"},
+
+	"BIAS(calib)": {
+		"dtype": "uint8",
+		"adr_start": "0x1B",
+		"adr_stop":  "0x1B"},
+
+	"CLK(calib)": {
+		"dtype": "uint8",
+		"adr_start": "0x1C",
+		"adr_stop":  "0x1C"},
+
+	"BPA(calib)": {
+		"dtype": "uint8",
+		"adr_start": "0x1D",
+		"adr_stop":  "0x1D"},
+
+	"PU(calib)": {
+		"dtype": "uint8",
+		"adr_start": "0x1E",
+		"adr_stop":  "0x1E"},
+
+	"MBIT(user)": {
+		"dtype": "uint8",
+		"adr_start": "0x60",
+		"adr_stop":  "0x60"},
+
+	"BIAS(user)": {
+		"dtype": "uint8",
+		"adr_start": "0x61",
+		"adr_stop":  "0x61"},
+
+	"CLK(user)": {
+		"dtype": "uint8",
+		"adr_start": "0x62",
+		"adr_stop":  "0x62"},
+
+	"BPA(user)": {
+		"dtype": "uint8",
+		"adr_start": "0x63",
+		"adr_stop":  "0x63"},
+
+	"PU(user)": {
+		"dtype": "uint8",
+		"adr_start": "0x63",
+		"adr_stop":  "0x63"},
+
 	"avgVDD_ThCalib_@(Ta1,Vdd2)": {
 		"dtype": "uint16",
 		"adr_start": "0x26",
