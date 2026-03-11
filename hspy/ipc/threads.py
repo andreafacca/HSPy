@@ -199,8 +199,7 @@ class Imshow(RThread):
         else:
             # If upstream thread failed, set success flag to False
             result['success'] = False
-            
-            print('here')
+
             
         return result
     
@@ -239,15 +238,19 @@ class Imshow(RThread):
                     if 'bboxes' in result.keys():
                         bboxes = result['bboxes']
                     
+                        pkl.dump(bboxes,open('bboxes','wb'))
+                        pkl.dump(frame,open('frame','wb'))
+                    
                         # Draw bounding boxes
                         for b in bboxes.index:
                             
                             box = bboxes.loc[[b]]
                         
-                            x,y = box['xtl'].item(),box['ytl'].item(),
-                            w = box['xbr'].item() - box['xtl'].item()
-                            h = box['ybr'].item() - box['ytl'].item()
-            
+                            x,y = int(box['xtl'].item()),int(box['ytl'].item()),
+                            w = int(box['xbr'].item()) - int(box['xtl'].item())
+                            h = int(box['ybr'].item()) - int(box['ytl'].item())
+  
+                            
                             frame = cv2.rectangle(frame, (x,y), (x+w,y+h), (255,255,0),1)
                     
                     cv2.imshow(self.window_name,frame)
@@ -445,18 +448,22 @@ class Record_Thread(RWThread):
                     
                     # Get bboxes if available
                     if 'bboxes' in data.keys():
+                        
+                        import pickle as pkl
+                        
                         bboxes = data['bboxes']
-                    
+                        
                         # Draw bounding boxes
                         for b in bboxes.index:
                             
                             box = bboxes.loc[[b]]
-                        
-                            x,y = box['xtl'].item(),box['ytl'].item(),
-                            w = box['xbr'].item() - box['xtl'].item()
-                            h = box['ybr'].item() - box['ytl'].item()
-            
-                            frame = cv2.rectangle(frame, (x,y), (x+w,y+h), 1 ,1)
+                            
+                            x,y = int(box['xtl']),int(box['ytl']),
+                            w = int(box['xbr'] - box['xtl'])
+                            h = int(box['ybr'] - box['ytl'])
+                            
+
+                            frame = cv2.rectangle(frame, (x,y), (x+w,y+h), (0,255,0) ,1)
                     
                     cv2.imshow(self.window_name,frame)
                     cv2.waitKey(1)

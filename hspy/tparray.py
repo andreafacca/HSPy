@@ -72,6 +72,7 @@ class TPArray():
         
         if self._SensorType is not None:
             self._init_by_SensorType()
+            self._init_by_ArrayType()
         elif self._ArrayType is not None:
             self._init_by_ArrayType()
         else:
@@ -876,11 +877,11 @@ class TPArray():
         stacklevel=2)
         return self.comp_electrical_offset(df_meas)
     
-    def comp_electrical_offset(self,df_meas:pd.Series):
+    def comp_electrical_offset(self,df_meas:pd.Series | pd.DataFrame):
         
         # Check type
-        if not isinstance(df_meas,pd.Series):
-            raise TypeError('df_meas must be pd.Series type')
+        if not (isinstance(df_meas,pd.Series) or isinstance(df_meas,pd.DataFrame)):
+            raise TypeError('df_meas must be pd.Series or pd.DataFrame')
         
         ''' Thermal offset compensation '''
         if self.DesignGen <= 3:
@@ -890,7 +891,7 @@ class TPArray():
         else:
             raise ValueError('DesignGen is not set or value not known.')
         
-    def _comp_electrical_offset_3(self,df_meas:pd.Series):
+    def _comp_electrical_offset_3(self,df_meas:pd.Series | pd.DataFrame):
         """
         
 
@@ -906,44 +907,59 @@ class TPArray():
 
         """
         
-        if not isinstance(df_meas,pd.Series):
-            raise Exception('Excpected a single measurement frame as pd.Series')
+        if not (isinstance(df_meas,pd.Series) or isinstance(df_meas,pd.DataFrame)):
+            raise TypeError('df_meas must be pd.Series or pd.DataFrame')
             return None
         
         
-        ''' Electrical offset compensation '''
-        ElOff = df_meas[self._e_off]
+        def comp_electrical_offset_row(df_row : pd.Series):
         
-      
-        Pixel = df_meas[self._pix] 
-        
-        
-        # Replicate electrical offsets corresponding to their pixels
-        if self._DevConst['NROFPTAT']==2:
-            ElOff_upper_half = ElOff.iloc[0:int(len(ElOff)/2)]
-            ElOff_lower_half = ElOff.iloc[int(len(ElOff)/2)::]
+            ''' Electrical offset compensation '''
+            ElOff = df_row[self._e_off]
             
-            # Replicate the electrical offsets for the lower and upper
-            # half NROFBLOCKS-times
-            ElOff_upper_half = pd.concat([ElOff_upper_half]*\
-                                         self._DevConst['NROFBLOCKS'],axis=0)
-            ElOff_lower_half = pd.concat([ElOff_lower_half]*\
-                                         self._DevConst['NROFBLOCKS'],axis=0)
-            # Concatenate
-            ElOff = pd.concat([ElOff_upper_half,
-                               ElOff_lower_half])
+          
+            Pixel = df_row[self._pix] 
             
-        elif self._DevConst['NROFPTAT']==1:
-            raise NotImplementedError('Yet to be implemented! Ask Bodo or Christoph!')
-            pass
+            
+            # Replicate electrical offsets corresponding to their pixels
+            if self._DevConst['NROFPTAT']==2:
+                ElOff_upper_half = ElOff.iloc[0:int(len(ElOff)/2)]
+                ElOff_lower_half = ElOff.iloc[int(len(ElOff)/2)::]
+                
+                # Replicate the electrical offsets for the lower and upper
+                # half NROFBLOCKS-times
+                ElOff_upper_half = pd.concat([ElOff_upper_half]*\
+                                             self._DevConst['NROFBLOCKS'],axis=0)
+                ElOff_lower_half = pd.concat([ElOff_lower_half]*\
+                                             self._DevConst['NROFBLOCKS'],axis=0)
+                # Concatenate
+                ElOff = pd.concat([ElOff_upper_half,
+                                   ElOff_lower_half])
+                
+            elif self._DevConst['NROFPTAT']==1:
+                raise NotImplementedError('Yet to be implemented! Ask Bodo or Christoph!')
+                pass
+            
+            V_el_comp = Pixel.values - ElOff.values
+            
+            df_row.loc[self._pix] = V_el_comp
+            
+            return df_row
         
-        V_el_comp = Pixel.values - ElOff.values
-        
-        df_meas.loc[self._pix] = V_el_comp
-        
+        if isinstance(df_meas,pd.Series):
+            df_meas = comp_electrical_offset_row(df_meas)
+        elif isinstance(df_meas,pd.DataFrame):
+            for i in df_meas.index:
+                df_meas.loc[i] = comp_electrical_offset_row(df_meas[i])
+                
         return df_meas
+            
     
-    def _comp_electrical_offset_4(self,df_meas:pd.Series):
+    def _comp_electrical_offset_4(self,df_meas:pd.Series | pd.DataFrame):
+        
+        if not (isinstance(df_meas,pd.Series) or isinstance(df_meas,pd.DataFrame)):
+            raise TypeError('df_meas must be pd.Series or pd.DataFrame')
+            return None
         
         ''' Eletrical offset compensation '''
         
