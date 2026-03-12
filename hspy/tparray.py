@@ -947,12 +947,16 @@ class TPArray():
             return df_row
         
         if isinstance(df_meas,pd.Series):
-            df_meas = comp_electrical_offset_row(df_meas)
+            df_comp = comp_electrical_offset_row(df_meas)
+            
         elif isinstance(df_meas,pd.DataFrame):
+            comp_list = []
             for i in df_meas.index:
-                df_meas.loc[i] = comp_electrical_offset_row(df_meas[i])
-                
-        return df_meas
+                comp_list.append(comp_electrical_offset_row(df_meas.loc[i]))
+            
+            df_comp = pd.concat(comp_list, axis = 1).T
+            
+        return df_comp
             
     
     def _comp_electrical_offset_4(self,df_meas:pd.Series | pd.DataFrame):
@@ -963,23 +967,39 @@ class TPArray():
         
         ''' Eletrical offset compensation '''
         
-        # Obtain pixels and electrical offsets from df_meas
-        pix = df_meas[self.DataCols.pix].values
-        e_off = df_meas[self.DataCols.e_off].values
+        def comp_electrical_offset_row(df_row : pd.Series):
         
-        # Reshape pixels
-        pix = pix.reshape(self._npsize)
+            # Obtain pixels and electrical offsets from df_meas
+            pix = df_row[self.DataCols.pix].values
+            e_off = df_row[self.DataCols.e_off].values
+            
+            # Reshape pixels
+            pix = pix.reshape(self._npsize)
+            
+            # Repeat electrical offsets along vertical axis
+            e_off = np.tile(e_off,(self.height,1))
+            
+            # Subtract
+            pix_comp = pix - e_off
+            
+            # Flatten and reassign to DataFrame
+            df_row[self.DataCols.pix] = pix_comp.flatten()
+            # raise NotImplementedError('Eletrical offset compensation not implemented '
+            #                           'for this htpa device')
+            
+            return df_row
         
-        # Repeat electrical offsets along vertical axis
-        e_off = np.tile(e_off,(self.height,1))
-        
-        # Subtract
-        pix_comp = pix - e_off
-        
-        # Flatten and reassign to DataFrame
-        df_meas[self.DataCols.pix] = pix_comp.flatten()
-        # raise NotImplementedError('Eletrical offset compensation not implemented '
-        #                           'for this htpa device')
+        if isinstance(df_meas,pd.Series):
+            df_comp = comp_electrical_offset_row(df_meas)
+            
+        elif isinstance(df_meas,pd.DataFrame):
+            comp_list = []
+            for i in df_meas.index:
+                comp_list.append(comp_electrical_offset_row(df_meas.loc[i]))
+            
+            df_comp = pd.concat(comp_list, axis = 1).T
+            
+        return df_comp
         
         
         return df_meas
