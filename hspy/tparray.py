@@ -218,7 +218,7 @@ class TPArray():
         elif (self.SensorType == SensorTypes['HTPA32x32dR2_L1k7_0k8']):
             self.ArrayType = ArrayTypes['HTPA32x32dR2']
             self._NETD = 152 # from datasheet   
-        elif (self.SensorType == SensorTypes['HTPA32x32dR2_L1k7_0k8_THiC[Si]']):
+        elif (self.SensorType == SensorTypes['HTPA32x32dR2_L1k7_0k8_THiC_Si']):
             self.ArrayType = ArrayTypes['HTPA32x32dR2']
         elif self.SensorType is None:
             self.ArrayType = None
