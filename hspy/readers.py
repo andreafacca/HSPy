@@ -196,7 +196,7 @@ class HTPAdGUI_FileReader():
         # Return the rotated dataframe
         return df_video
     
-    def export_bds(self,df_video,header,bds_path,**kwargs):
+    def export_bds(self,df_video:pd.DataFrame,header:str,bds_path:Path,**kwargs):
         """
         Export a video sequence in dataframe format to a .bds file that is
         compatible with HTPAdGUI
