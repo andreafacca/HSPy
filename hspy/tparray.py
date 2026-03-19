@@ -15,7 +15,7 @@ import time
 
 import warnings
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from collections.abc import Sequence, Iterator
 from typing import Dict, List, Mapping, Any
 
@@ -517,14 +517,12 @@ class TPArray():
         ATC = ['ATC'+str(a) for a in range(0,DevConst['NROFATC'])]
                 
         # Store these headers in the class attribute DataCols
-        ColHeaders = {'pix':pix,
-                      'e_off': e_off,
-                      'vdd':vdd,
-                      'T_amb':T_amb,
-                      'PTAT':PTAT,
-                      'ATC':ATC}
-        
-        self.DataCols = DataCols(ColHeaders)
+        self.DataCols = DataCols(pix=pix,
+                                 e_off=e_off,
+                                 vdd=vdd,
+                                 T_amb=T_amb,
+                                 PTAT=PTAT,
+                                 ATC=ATC)
 
     def _init_DerivedConstants_4(self):
         
@@ -553,16 +551,17 @@ class TPArray():
         # PTAT header (there's only one)
         PTAT = ['PTAT0']
         
+        # ATC header (none exists)
+        ATC = []
+        
         # Store these headers in the class attribute DataCols
-        ColHeaders = {'pix':pix,
-                      'e_off': e_off,
-                      'vdd':vdd,
-                      'T_amb':T_amb,
-                      'PTAT':PTAT}
-        
-        self.DataCols = DataCols(ColHeaders)
-        
-        
+        self.DataCols = DataCols(pix=pix,
+                                 e_off=e_off,
+                                 vdd=vdd,
+                                 T_amb=T_amb,
+                                 PTAT=PTAT,
+                                 ATC=ATC)
+                
     def _load_calib_json(self, path:Path):
         
         with open(path,'r') as file:
@@ -1485,14 +1484,16 @@ class DataCols(Sequence[str]):
     - Attribute access: cols.pix -> list of headers in group "pix"
     - Sequence behavior: list(cols) -> all headers concatenated
     """
-    _groups: Dict[str, List[str]]
-
-    def __getattr__(self, name: str) -> List[str]:
-        # Called only if normal attribute lookup fails
-        try:
-            return self._groups[name]
-        except KeyError as e:
-            raise AttributeError(f"No header group named '{name}'") from e
+    pix: List[str]
+    e_off: List[str]
+    vdd: List[str]
+    T_amb: List[str]
+    PTAT: List[str]
+    ATC: List[str]
+    
+    @property
+    def _groups(self) -> Dict[str, List[str]]:
+        return {f.name: getattr(self, f.name) for f in fields(self)}
 
     def __iter__(self) -> Iterator[str]:
         for group in self._groups.values():
