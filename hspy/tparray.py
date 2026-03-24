@@ -493,6 +493,7 @@ class TPArray():
         elif self.ArrayType == ArrayTypes['HTPA50x50d']:
             self.DevConst['NROFATC'] = 0
             self.DevConst['NROFPTAT'] = 1
+            self.DevConst['NROFBLOCKS'] = 50
 
 
         else:
