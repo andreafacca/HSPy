@@ -70,6 +70,9 @@ class TPArray():
         self._SensorType = attr_dict.pop('SensorType',None)
         self._ArrayType = attr_dict.pop('ArrayType',None)
         
+        width = attr_dict.pop('w',None)
+        height = attr_dict.pop('h',None)
+        
         self.DevConst = {}
         
         if self._SensorType is not None:
@@ -77,8 +80,11 @@ class TPArray():
             self._init_by_ArrayType()
         elif self._ArrayType is not None:
             self._init_by_ArrayType()
+        elif width is not None and height is not None:
+            self._init_by_Resolution(width,height)
+            self._init_by_ArrayType()
         else:
-            raise Exception('Provide either SensorType or ArrayType!')
+            raise Exception('Provide either SensorType or ArrayType or Resolution!')
         
         # Init basic attributes and DevConst by resolution
         self._init_DevConst()
@@ -288,6 +294,31 @@ class TPArray():
             self.height = None
         else:
             raise NotImplementedError('ArrayType not implemented or not known!')
+
+    def _init_by_Resolution(self,width,height):
+        
+        if width == 8 and height == 8:
+            self.ArrayType = ArrayTypes['HTPA8x8']
+        elif width == 16 and height == 16:
+            self.ArrayType = ArrayTypes['HTPA16x16dR3']
+        elif width == 32 and height == 32:
+            self.ArrayType = ArrayTypes['HTPA32x32d']
+        elif width == 80 and height == 64:
+            self.ArrayType = ArrayTypes['HTPA80x64d']            
+        elif width == 120 and height == 84:
+            self.ArrayType = ArrayTypes['HTPA120x84dR2']
+        elif width == 84 and height == 60:
+            self.ArrayType = ArrayTypes['HTPA84x60d']
+        elif width == 60 and height == 40:
+            self.ArrayType = ArrayTypes['HTPA60x40dR2']
+        elif width == 160 and height == 120:
+            self.ArrayType = ArrayTypes['HTPA160x120dR1']
+        elif width == 80 and height == 60:
+            self.ArrayType = ArrayTypes['HTPA80x60d']
+        elif width == 50 and height == 50:
+            self.ArrayType = ArrayTypes['HTPA50x50d']
+        else:
+            raise NotImplementedError(f'No Array with w x h {width}x{height} known!')
 
     def _init_DevConst(self):
         
