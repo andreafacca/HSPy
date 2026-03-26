@@ -237,58 +237,72 @@ class TPArray():
             self.width = 8
             self.height = 8
             self.DesignGen = 0
+            self.UDP_PackageIndex = 0
         elif (self.ArrayType == ArrayTypes['HTPA16x16']):
             self.width = 16
             self.height = 16
             self.DesignGen = 0
+            self.UDP_PackageIndex = 0
         elif (self.ArrayType == ArrayTypes['HTPA32x32d']):
             self.width = 32
             self.height = 32
             self.DesignGen = 0
+            self.UDP_PackageIndex = 0
         elif (self.ArrayType == ArrayTypes['HTPA80x64d']):
             self.width = 80
             self.height = 64
             self.DesignGen = 0
+            self.UDP_PackageIndex = 1
         elif (self.ArrayType == ArrayTypes['HTPA120x84d']):
             self.width = 120
             self.height = 84
             self.DesignGen = 0
+            self.UDP_PackageIndex = 1
         elif (self.ArrayType == ArrayTypes['HTPA84x60d']):
             self.width = 84
             self.height = 60
             self.DesignGen = 1
+            self.UDP_PackageIndex = 1
         elif (self.ArrayType == ArrayTypes['HTPA60x40d']):
             self.width = 60
             self.height = 40
             self.DesignGen = 1
+            self.UDP_PackageIndex = 1
         elif (self.ArrayType == ArrayTypes['HTPA160x120d']):
             self.width = 160
             self.height = 120
             self.DesignGen = 1
+            self.UDP_PackageIndex = 1
         elif (self.ArrayType == ArrayTypes['HTPA120x84dR2']):
             self.width = 120
             self.height = 84
             self.DesignGen = 1
+            self.UDP_PackageIndex = 1
         elif (self.ArrayType == ArrayTypes['HTPA16x16dR3']):
             self.width = 16
             self.height = 16
             self.DesignGen = 2
+            self.UDP_PackageIndex = 0
         elif (self.ArrayType == ArrayTypes['HTPA160x120dR1']):
             self.width = 160
             self.height = 120
             self.DesignGen = 1
+            self.UDP_PackageIndex = 1
         elif (self.ArrayType == ArrayTypes['HTPA80x60d']):
             self.width = 80
             self.height = 60
             self.DesignGen = 3
+            self.UDP_PackageIndex = 1
         elif (self.ArrayType == ArrayTypes['HTPA60x40dR2']):
             self.width = 60
             self.height = 40 
             self.DesignGen = 1
+            self.UDP_PackageIndex = 1
         elif (self.ArrayType == ArrayTypes['HTPA50x50d']):
             self.width = 50
             self.height = 50      
             self.DesignGen = 4
+            self.UDP_PackageIndex = 1
         elif self.ArrayType is None:
             self.width = None
             self.height = None

@@ -5,7 +5,7 @@ Created on Thu Feb  8 16:08:22 2024
 @author: rehmer
 """
 
-
+import pickle as pkl
 import numpy as np 
 from pathlib import Path
 import pandas as pd
@@ -489,7 +489,7 @@ class HTPA_ByteStream_Converter():
             _ = package[0]
             
             # Loop over all bytes and combine MSB and LSB
-            idx = np.arange(1,len(package),2)
+            idx = np.arange(self.tparray.UDP_PackageIndex,len(package),2)
             for i in idx:    
                 self.data[j] = int.from_bytes(package[i:i+2], byteorder='little')
                 j = j+1
@@ -649,7 +649,7 @@ class HTPA_UDPReader():
                 break
             
             time.sleep(10/1000)
-        
+                   
         return packages
             
     
@@ -1116,7 +1116,7 @@ class HTPA_UDPReader():
                 
             # In the end check if as many packages were received as expected
             if len(packages) == self.tparray._package_num:
-                
+                               
                 # If yes, pass the packages to the class that parses the
                 # bytes into an np.ndarray or pd.DataFrame
                 # df_frame = self.bytestream_reader.bytes_to_df(packages)
