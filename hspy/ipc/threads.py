@@ -33,7 +33,8 @@ class UDP(WThread):
     at this point
     """
     
-    def __init__(self,udp_reader:HTPA_UDPReader,
+    def __init__(self,
+                 udp_reader:HTPA_UDPReader,
                  write_buffer:Queue,
                  write_condition:Condition,
                  IP:str = '',
@@ -237,10 +238,7 @@ class Imshow(RThread):
                     # Get bboxes if available
                     if 'bboxes' in result.keys():
                         bboxes = result['bboxes']
-                    
-                        pkl.dump(bboxes,open('bboxes','wb'))
-                        pkl.dump(frame,open('frame','wb'))
-                    
+                                       
                         # Draw bounding boxes
                         for b in bboxes.index:
                             
@@ -626,7 +624,141 @@ class Record_Thread(RWThread):
     def stop(self):
         self._exit = True
             
+class EMACounting_Thread(RThread):
+    """
+    Thread that counts the number of confirmed tracks per frame, and returns
+    an exponential moving average (EMA) of that number via
+        
+        s_t = a*x_t + (1-a) * s_t-1
+        
+        s_t:    Estimated average at time t
+        a:      Filter coefficient
+        x_t:    Detections at time t
+        s_t-1:  Estimated average at time t-1
+        
+    Useful for counting the number of detected objects, e.g. persons, over time.
+    """
+    def __init__(self,
+                 read_buffer:Queue,
+                 read_condition:Condition,
+                 **kwargs):
+        
+        # self.T0 = T0                      # Desired time constant of EMA filter in seconds
+        # self.a = None                     # Filter coefficient
+        # self.filt_estimated  = False      # Boolean that indicates whether the filter coefficients have been estimated or not
+        
+        
+        self.N_win = 10                # Number of initial frames from which dT is estimated, which is required to calculate the filter coefficient
+        self.tau = 2
+        
+        self.Win = [np.nan]*self.N_win
+        # self.k = 0                        # Counter that is incremented until N_window is reached
+        # self.t0 = None                    # Time at receiving first detection result
+        # self.dT_samples = []              # List of samples to estimate dT from
+        
+        # Call constructor of parent class
+        super(EMACounting_Thread,self).__init__(target = self._target_function,
+                                                read_buffer = read_buffer,
+                                                read_condition = read_condition,
+                                                **kwargs)
+        
+    @property
+    def a(self):
+        return self._a
+    @a.setter
+    def a(self, a:float):
+        self._a = a
+        
+    @property
+    def T0(self):
+        return self._T0
+    @T0.setter
+    def T0(self, T0:int):
+        self._T0 = T0
 
+    @property
+    def filt_estimated(self):
+        return self._filt_estimated
+    @filt_estimated.setter
+    def filt_estimated(self, filt_estimated:bool):
+        self._filt_estimated = filt_estimated
+    
+    @property
+    def N_win(self):
+        return self._N_win
+    @N_win.setter
+    def N_win(self, N_win:int):
+        self._N_win = N_win
+        
+    @property
+    def k(self):
+        return self._k
+    @k.setter
+    def k(self, k:int):
+        self._k = k
+        
+        
+    def _target_function(self):
+        
+        
+        # # ---------------------------------------------------------------------
+        # # Estimate filter coefficients
+        # # ---------------------------------------------------------------------
+        
+        # # At each call of this target function, sample the time since the last
+        # # call to obtain an estimate for the sampling time interval dT
+        # if not self.filt_estimated:
+        #     if self.k == 0:
+        #         self.t0 = time.time()
+        #         self.k+=1
+        #     elif self.k == 1:
+        #         t_now = time.time()
+        #         self.dT_samples.append(t_now-self.t0)
+        #     elif self.k < self.N_init+1:
+        #         t_now = time.time()
+        #         self.dT_samples.append(t_now-self.dT_samples[-1])
+        
+        #     # If desired number of samples is acquired, estimate dT and a
+        #     if len(self.dT_samples) == self.N_init:
+        #         dT = np.mean(self.dT_samples)
+        #         self.a = 1 - np.exp(-dT/self.T0)
+                
+        
+        # ---------------------------------------------------------------------
+        # Acquire data from read buffer
+        # ---------------------------------------------------------------------
+        result = self.read_buffer.get()
+        
+        # Try to obtain number of confirmed detections
+        if result['success'] == True:
+            if 'bboxes' in result.keys():
+                bboxes = result['bboxes']
+                
+                n_conf = len(bboxes.loc[bboxes['confirmed']==True])
+                
+            else:
+                n_conf = np.nan
+                
+        else:
+            n_conf = np.nan
+            
+        # Add obtained confirmed detections to window
+        self.Win.append(n_conf)
+        self.Win = self.Win[1::]
+        
+        # Calculate the mean over the whole window
+        n_avg = np.nanmean(np.array(self.Win))
+        
+        # Return the result as a dictionary Dictionary for storing results in
+        result['n_avg'] = n_avg
+        
+        
+        print(np.round(n_avg))
+
+               
+        return result
+    
+    
 
 class FileWriter_Thread(RThread):
     """
